@@ -64,7 +64,6 @@
             var $newSelect = $originalSelect.next("." + Settings.select);
             var selectedOption = $originalSelect[0][$originalSelect.context.selectedIndex];
             Settings.setDataSelect($newSelect, selectedOption);
-            console.log("1");
         }
     }
 
