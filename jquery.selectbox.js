@@ -8,14 +8,15 @@
         selectIsOpen: "open",
         selectIsPressed: "pressed",
         optionsItemIsSelected: "selected",
-        setDataSelect: function ($newSelect, data) {
+        setData: function ($newSelect, data) {
             $newSelect
                 .data("value", data.value)
                 .data("html", data.innerHTML)
-                .children("." + Settings.selectText).html(data.innerHTML);
+                .children("." + Settings.selectText)
+                .html(data.innerHTML);
             return $newSelect;
         },
-        getDataSelect: function ($newSelect) {
+        getData: function ($newSelect) {
             return {
                 value: $newSelect.data("value"),
                 text: $newSelect.data("html")
@@ -28,69 +29,72 @@
             return width;
         }
     };
-    // Public methods
+
+    $.fn.selectbox = function (method) {
+        if ( methods[method] ) {
+            return methods[ method ].apply( this, Array.prototype.slice.call( arguments, 1 ));
+        } else if ( typeof method === 'object' || ! method ) {
+            return methods.init.apply( this, arguments );
+        } else {
+            $.error( 'The method "' +  method + '" not exist in jQuery.selectbox' );
+        }
+    };
+
     var methods = {
         init:function(params) {
             Options = $.extend({
                 selectWidth: 200,
                 selectCssClass: "new-select",
-                selectIconContent: "",
                 selectIsShowTitle: false,
+                selectIconContent: "",
                 optionsListScrollHeight: 300,
-                beforeSelectOpen: function (data) {},
-                beforeSelectClose: function (data) {}
+                beforeSelectOpen: function (newSelect, data) {},
+                beforeSelectClose: function (newSelect, data) {}
             }, params);
 
-            // Create container for list items
+            Settings.body = $(document.body);
             Settings.$optionsList = $("<div />").attr({"class": Settings.optionsList});
 
-            $(document.body).append(Settings.$optionsList)
-                // Add click handler for "body" element
-                .on("click.selectbox", clickOnBody)
-                // Add click handler for "select" element
+            Settings.body.append(Settings.$optionsList)
                 .on("click.selectbox", ("." + Settings.select), clickOnSelect)
-                // Add mousedown/mouseup handler for "select" element
                 .on("mousedown.selectbox mouseup.selectbox", ("." + Settings.select), switchPressedState)
-                // Add click handler for "option list item" element
                 .on("click.selectbox", ("." + Settings.optionsListItem), clickOnOptionsListItem);
 
-            return this.each(eachOriginalSelect).on("change", changeOriginalSelect);
+            return this.filter("select")
+                .on("change", changeOriginalSelect)
+                .each(eachOriginalSelect);
         }
     };
 
     function changeOriginalSelect(e) {
-        if (e.isChangeFromNewSelect == "undefined") {
+        if (e.isChangeFromNewSelect == undefined) {
             var $originalSelect = $(this);
             var $newSelect = $originalSelect.next("." + Settings.select);
-            var selectedOption = $originalSelect[0][$originalSelect.context.selectedIndex];
-            Settings.setDataSelect($newSelect, selectedOption);
+            var selectedOption = $originalSelect[0][$originalSelect.prop("selectedIndex")];
+            Settings.setData($newSelect, selectedOption);
         }
     }
 
-    // Get each select and create environment
     function eachOriginalSelect(index, element) {
         var $originalSelect = $(element);
-        if (!($originalSelect.is("select") || $originalSelect.next().is("." + Settings.select))) return;
-        var $newSelect = $("<span />").attr({"class": Settings.select});
-        var $newSelectText = $("<span />").attr({"class": Settings.selectText});
-        var $newSelectIcon = $("<span />").attr({"class": Settings.selectIcon}).html(Options.selectIconContent);
+        if ($originalSelect.next().hasClass(Settings.select)) return;
         var newSelectCssClass = $originalSelect.data("css-class") ? [$originalSelect.data("css-class"), Options.selectCssClass].join(" ") : Options.selectCssClass;
+        var $newSelect = $("<span />").addClass(Settings.select);
+        var $newSelectText = $("<span />").addClass(Settings.selectText);
+        var $newSelectIcon = $("<span />").addClass(Settings.selectIcon).html(Options.selectIconContent);
 
-        // Insert elements at the DOM
-        $newSelect.append($newSelectText)
-            .append($newSelectIcon)
+        $newSelect
             .addClass(newSelectCssClass)
+            .append($newSelectText)
+            .append($newSelectIcon)
             .insertAfter($originalSelect.hide());
 
-        // Set current/correct data attrs and html of new "select"
-        var selectedOption = $originalSelect[0][$originalSelect.context.selectedIndex];
-        Settings.setDataSelect($newSelect, selectedOption);
+        var selectedOption = $originalSelect[0][$originalSelect.prop("selectedIndex")];
+        Settings.setData($newSelect, selectedOption);
 
-        // Set correct width for "select"
         setSelectWidth($newSelect, $originalSelect);
     };
 
-    // Set correct "select" width
     function setSelectWidth($newSelect, $originalSelect) {
         if (Options.selectWidth == "auto") {
             var originalSelectWidth = $originalSelect.outerWidth();
@@ -111,15 +115,12 @@
         }
     }
 
-    // Handler for click event on "select"
     function clickOnSelect() {
         var $select = $(this);
-        // If click in current open "select"
         if ($select.hasClass(Settings.selectIsOpen)) {
             closeSelect($select);
         } else {
             var $selectOpen = $("." + Settings.select).filter("." + Settings.selectIsOpen);
-            // If click in another "select", check open "select"
             if ($selectOpen.length > 0) {
                 closeSelect($selectOpen);
             } else {
@@ -130,12 +131,15 @@
     };
 
     function openSelect($select) {
-        var data = Settings.getDataSelect($select);
-        Options.beforeSelectOpen.call($select, data);
+        var $origSelect = $select.prev();
+        var data = Settings.getData($select);
+        $origSelect.trigger("beforeSelectOpen", [$select, data]);
+        Options.beforeSelectOpen.apply($origSelect, [$select, data]);
         buildingOptionsList($select);
+        Settings.body.on("click.selectbox", clickOnBody)
+            .on("keyup.selectbox", keypressEsc);
     };
 
-    // Building "options list"
     function buildingOptionsList($newSelect) {
         var $originalSelect = $newSelect.prev();
         $newSelect.addClass(Settings.selectIsOpen);
@@ -150,7 +154,6 @@
         setPositionOptionsList($newSelect);
     };
 
-    // Set position for "options list"
     function setPositionOptionsList($select) {
         var $newSelectOffset = $select.offset();
         var newSelectHeight = $select.outerHeight();
@@ -162,7 +165,6 @@
         Settings.$optionsList.offset(position).show();
     };
 
-    // Set correct dimensions for "options list"
     function setDimensionsOptionsList($select) {
         var selectWidth = $select.outerWidth();
         var scrollbarWidth = 16;
@@ -176,15 +178,13 @@
             isNeedScrollbar: false
         };
 
-        // OptionsList box are not can be higher than content inside it
         if (optionsList.height > Options.optionsListScrollHeight) {
             finalDimensions.height = Options.optionsListScrollHeight;
             finalDimensions.isNeedScrollbar = true;
         }
-        // OptionsList box are not can be shorter than select box
+
         if (selectWidth > optionsList.width) {
             finalDimensions.width = selectWidth;
-            // If has scrollbar we increase width of options list
             if (finalDimensions.isNeedScrollbar) {
                 var difference = selectWidth - optionsList.width;
                 if (difference < scrollbarWidth) {
@@ -199,7 +199,6 @@
         Settings.$optionsList.width(finalDimensions.width).height(finalDimensions.height);
     };
 
-    // Handler for click event on "options list" box
     function clickOnOptionsListItem() {
         var $optionsListItem = $(this);
         var $selectOpen = $("." + Settings.select).filter("." + Settings.selectIsOpen);
@@ -207,63 +206,60 @@
             value: $optionsListItem.data("value"),
             innerHTML: $optionsListItem.html()
         };
-        Settings.setDataSelect($selectOpen, data);
+        Settings.setData($selectOpen, data);
         $selectOpen.prev().val(data.value).trigger({type: "change", isChangeFromNewSelect: true});
         checkIsNeedTitle($selectOpen, $selectOpen.width());
         closeSelect($selectOpen);
         return false;
     };
 
-    // Closing "select" and clean content/event handlers
     function closeSelect($select) {
-        var data = Settings.getDataSelect($select);
-        Options.beforeSelectClose.call($select, data);
+        var $origSelect = $select.prev();
+        var data = Settings.getData($select);
+        $origSelect.trigger("beforeSelectClose", [$select, data]);
+        Options.beforeSelectClose.apply($origSelect, [$select, data]);
         $select.removeClass(Settings.selectIsOpen);
         Settings.$optionsList.hide()
             .empty()
             .removeAttr("style")
             .off("click.selectbox", ("." + Settings.optionsListItem), clickOnOptionsListItem);
+        $(document.body).off("click.selectbox", clickOnBody)
+            .off("keyup.selectbox", keypressEsc);
     };
 
-    // Handler for click event on "body" element
     function clickOnBody(e) {
         var $clickedElem = $(e.target);
         var $parentElem = $clickedElem.parent();
         var $selectOpen = $("." + Settings.select).filter("." + Settings.selectIsOpen);
-        // Close "select" if parent element is body or without CSS class
-        if ($parentElem[0].nodeName.toLowerCase() == "body" || $parentElem[0].className == "undefined") {
+        if ($parentElem.prop("nodeName").toLowerCase() == "body" || $parentElem.attr("class") == undefined) {
             closeSelect($selectOpen);
         } else {
-            // Check parent element class
-            if (!($parentElem.hasClass(Settings.select) || $parentElem.hasClass(Settings.optionsList))) closeSelect($selectOpen);
+            if (!($parentElem.hasClass(Settings.select) || $parentElem.hasClass(Settings.optionsList)))
+                closeSelect($selectOpen);
         }
     };
 
-    // Handler for mousedown/mouseup event
+    function keypressEsc(e) {
+        console.log(e.keyCode);
+        if (e.keyCode == 27) {
+            var $selectOpen = $("." + Settings.select).filter("." + Settings.selectIsOpen);
+            closeSelect($selectOpen);
+        }
+    }
+
+    function checkIsNeedTitle($newSelect, newSelectWidth) {
+        var newSelectText = Settings.getData($newSelect).text;
+        var newSelectTextWidth = Settings.getWidthText(newSelectText);
+        if (Options.selectIsShowTitle && newSelectTextWidth > newSelectWidth)
+            $newSelect.attr("title", newSelectText);
+        else
+            $newSelect.removeAttr("title");
+    };
+
     function switchPressedState(e) {
         var $newSelect = $(this);
         var isPressed = (e.type == "mousedown");
         $newSelect.toggleClass(Settings.selectIsPressed, isPressed);
-    };
-
-    function checkIsNeedTitle($newSelect, newSelectWidth) {
-        var newSelectText = Settings.getDataSelect($newSelect).text;
-        var newSelectTextWidth = Settings.getWidthText(newSelectText);
-        if (Options.selectIsShowTitle && newSelectTextWidth > newSelectWidth) $newSelect.attr({"title": newSelectText});
-    };
-
-    $.fn.selectbox = function (method) {
-        // Call the need method
-        if ( methods[method] ) {
-            // Method exists - call, take all parameters and this
-            return methods[ method ].apply( this, Array.prototype.slice.call( arguments, 1 ));
-        } else if ( typeof method === 'object' || ! method ) {
-            // If method is object or empty - call init
-            return methods.init.apply( this, arguments );
-        } else {
-            // Error
-            $.error( 'The method "' +  method + '" not exist in jQuery.selectbox' );
-        }
     };
 
 })(jQuery);
