@@ -1,8 +1,10 @@
 
-body {font: 14px Arial, "Helvetica CY", "Nimbus Sans L", sans-serif;}
+body {font: 14px Arial, "Helvetica CY", "Nimbus Sans L", sans-serif; height:100%;}
 .block {margin:50px 50px 0;}
 .control {margin-bottom:15px;}
 .label {font-weight:bold; display:inline-block; margin-right:10px;}
+.input {margin-top:20px;}
+.input input {width:200px;}
 
 /* Эти стили должны быть обязательно */
 .ui-select {position:relative; display:inline-block;}
@@ -13,15 +15,15 @@ body {font: 14px Arial, "Helvetica CY", "Nimbus Sans L", sans-serif;}
 /* /Эти стили должны быть обязательно */
 
 /* Ваши кастомные стили */
-.my-select {border:1px solid #B7B7B7; padding: 3px 19px 3px 8px; color:#3f3f3f;}
-.my-select:hover {border:1px solid #717171;}
-.my-select.pressed {box-shadow: inset 0 2px 4px 1px rgba(0, 0, 0, 0.2);}
-.my-icon {right:4px; top: 5px; font-size: 10px;}
-.my-list {border:1px solid #848484; background: #e8e8e8; z-index:1000;}
-.my-item {padding:3px 10px; border-top:1px solid #b1b1b1;}
-.my-item:first-child {border-top:none;}
-.my-item:hover {cursor:pointer; background: #bcbcbc;}
-.my-item.selected {background: #b7b7b7;}
+.simple-select {border:1px solid #B7B7B7; padding: 3px 19px 3px 8px; color:#3f3f3f;}
+.simple-select:hover {border:1px solid #717171;}
+.simple-select.pressed {box-shadow: inset 0 2px 4px 1px rgba(0, 0, 0, 0.2);}
+.simple-select-icon {right:4px; top: 5px; font-size: 10px;}
+.simple-select-list {border:1px solid #848484; background: #e8e8e8; z-index:1000;}
+.simple-select-item {padding:3px 10px; border-top:1px solid #b1b1b1;}
+.simple-select-item:first-child {border-top:none;}
+.simple-select-item:hover {cursor:pointer; background: #bcbcbc;}
+.simple-select-item.selected {background: #b7b7b7;}
 
 .long-select {
     border:3px solid #00920a;
@@ -33,11 +35,30 @@ body {font: 14px Arial, "Helvetica CY", "Nimbus Sans L", sans-serif;}
 }
 .long-select:hover {border-color:#006807;}
 .long-select.pressed {box-shadow: inset 0 2px 4px 1px rgba(0, 0, 0, 0.2);}
-.long-text {color:#737373; font-size:18px;}
-.long-icon {border-width:8px 10px 0 10px; border-color:#c48649 transparent transparent; border-style: solid; top:12px; right:10px;}
-.long-list {background: #f2f2f2; z-index:1000; box-shadow:0 3px 6px 3px rgba(0, 0, 0, 0.2);}
-.long-item {color:#737373; line-height:30px; padding:0 20px; border-top:1px dotted #b0b0b0;}
-.long-item:first-child {border-top:none;}
-.long-item:hover {cursor:pointer; background: #ffa452;}
-.long-item.selected {background: #fe7900;}
+.long-select-text {color:#737373; font-size:18px;}
+.long-select-icon {border-width:8px 10px 0 10px; border-color:#fe7900 transparent transparent; border-style: solid; top:12px; right:10px;}
+.long-select-list {background: #f2f2f2; z-index:1000; box-shadow:0 3px 6px 3px rgba(0, 0, 0, 0.2);}
+.long-select-item {color:#737373; line-height:30px; padding:0 20px; border-top:1px dotted #b0b0b0;}
+.long-select-item:first-child {border-top:none;}
+.long-select-item:hover {cursor:pointer; background: #ffa452;}
+.long-select-item.selected {background: #fe7900;}
+
+
+.middle-select {
+    border:1px solid #606060;
+    border-radius:5px;
+    padding:3px 15px 3px 10px;
+    background: -webkit-linear-gradient(#f7f7f7, #dadada);
+    background: -moz-linear-gradient(#f7f7f7, #dadada);
+    background: linear-gradient(#f7f7f7, #dadada);
+}
+.middle-select:hover {border-color:#3b3b3b;}
+.middle-select.pressed {box-shadow: inset 0 2px 4px 1px rgba(0, 0, 0, 0.2);}
+.middle-select-text {color:#868491; font-size:16px;}
+.middle-select-icon {border-width:8px 6px 0 6px; border-color:#505050 transparent transparent; border-style: solid; top:9px; right:10px;}
+.middle-select-list {border:1px solid #606060; border-radius:5px; background: #f6f6f6; z-index:1000; box-shadow:0 3px 6px 3px rgba(0, 0, 0, 0.2);}
+.middle-select-item {color:#737373; line-height:30px; padding:0 20px; border-top:1px dashed #b0b0b0;}
+.middle-select-item:first-child {border-top:none;}
+.middle-select-item:hover {cursor:pointer; background: #e0e0e0;}
+.middle-select-item.selected {background: #cbcbcb;}
 /* /Ваши кастомные стили */

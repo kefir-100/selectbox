@@ -49,21 +49,20 @@
                 heightOfList: 300,
                 classes: {
                     select: "select",
-                    text: "text",
-                    icon: "icon",
-                    list: "list",
-                    item: "item"
+                    text: "select-text",
+                    icon: "select-icon",
+                    list: "select-list",
+                    item: "select-item"
                 },
                 beforeOpen: function (newSelect, data) {},
-                beforeClose: function (newSelect, data) {}
+                afterClose: function (newSelect, data) {}
             }, params);
-
-            Settings.document = $(document);
+            Settings.doc = $(document);
             Settings.body = $(document.body);
 
             if (Settings.$optionsList == undefined) {
                 Settings.$optionsList = $("<div />").addClass(Settings.list).appendTo(Settings.body);
-                Settings.document.on("click.selectbox", ("." + Settings.select), clickOnSelect)
+                Settings.doc.on("click.selectbox", ("." + Settings.select), clickOnSelect)
                     .on("mousedown.selectbox mouseup.selectbox", ("." + Settings.select), switchPressedState)
                     .on("click.selectbox", ("." + Settings.item), clickOnOptionsListItem);
             }
@@ -71,6 +70,12 @@
             return this.filter("select")
                 .on("change", changeOriginalSelect)
                 .each(eachOriginalSelect);
+        },
+        remove: function () {
+            return this.filter("select")
+                .each(function (index, element) {
+
+                });
         }
     };
 
@@ -86,10 +91,15 @@
     function eachOriginalSelect(index, element) {
         var $originalSelect = $(element);
         if ($originalSelect.next().hasClass(Settings.select)) return;
+        var selectData = {
+            classOfList: Options.classes.list,
+            classOfItem: Options.classes.item,
+            beforeOpen: Options.beforeOpen,
+            afterClose: Options.afterClose
+        };
         var $newSelect = $("<span />")
             .addClass([Settings.select, Options.classes.select].join(" "))
-            .prop("classOfList", Options.classes.list)
-            .prop("classOfItem", Options.classes.item);
+            .prop("selectData", selectData);
         var $newSelectText = $("<span />").addClass([Settings.text, Options.classes.text].join(" "));
         var $newSelectIcon = $("<span />").addClass([Settings.icon, Options.classes.icon].join(" ")).html(Options.contentOfIcon);
         $newSelect
@@ -141,38 +151,28 @@
     function openSelect($select) {
         var $origSelect = $select.prev();
         var data = Settings.getData($select);
+        var beforeOpenFunc = $select.prop("selectData").beforeOpen;
         $origSelect.trigger("beforeOpen", [$select, data]);
-        Options.beforeOpen.apply($origSelect, [$select, data]);
+        beforeOpenFunc.apply($origSelect, [$select, data]);
         buildingOptionsList($select);
-        Settings.document.on("click.selectbox", clickOnBody)
+        Settings.doc.on("click.selectbox", clickOnBody)
             .on("keyup.selectbox", keypressEsc);
     };
 
     function buildingOptionsList($newSelect) {
         var $originalSelect = $newSelect.prev();
-        var customCssClassItem = $newSelect.prop("classOfItem");
+        var selectData = $newSelect.prop("selectData");
         $newSelect.addClass(Settings.isOpen);
         $originalSelect.children().each(function (index, element) {
             var $option = $(element);
             var html = $option.html();
             var value = $option.val();
-            var $optionsListItem = $("<li />").addClass([Settings.item, customCssClassItem].join(" ")).data("value", value).html(html);
+            var $optionsListItem = $("<li />").addClass([Settings.item, selectData.classOfItem].join(" ")).data("value", value).html(html);
             if ($option.is(":selected")) $optionsListItem.addClass(Settings.isSelected);
             Settings.$optionsList.append($optionsListItem);
         });
-        Settings.$optionsList.addClass($newSelect.prop("classOfList"));
-        setPositionOptionsList($newSelect);
-    };
-
-    function setPositionOptionsList($select) {
-        var $newSelectOffset = $select.offset();
-        var newSelectHeight = $select.outerHeight();
-        var position = {
-            left:$newSelectOffset.left,
-            top: $newSelectOffset.top + newSelectHeight
-        };
-        setDimensionsOptionsList($select);
-        Settings.$optionsList.offset(position).show();
+        Settings.$optionsList.addClass(selectData.classOfList);
+        setDimensionsOptionsList($newSelect);
     };
 
     function setDimensionsOptionsList($select) {
@@ -207,6 +207,23 @@
             }
         }
         Settings.$optionsList.width(finalDimensions.width).height(finalDimensions.height);
+        setPositionOptionsList($select);
+    };
+
+    function setPositionOptionsList($select) {
+        var $selectOffset = $select.offset();
+        var selectHeight = $select.outerHeight();
+        var scrollTop = Settings.body.scrollTop();
+        var realHeight = Settings.doc.height() + scrollTop;
+        var optionsListHeight = Settings.$optionsList.outerHeight();
+        var position = {
+            left:$selectOffset.left,
+            top: $selectOffset.top + selectHeight + scrollTop
+        };
+        if (position.top + optionsListHeight > realHeight) {
+            position.top = position.top - selectHeight - optionsListHeight;
+        }
+        Settings.$optionsList.offset(position).show();
     };
 
     function clickOnOptionsListItem() {
@@ -226,16 +243,19 @@
     function closeSelect($select) {
         var $origSelect = $select.prev();
         var data = Settings.getData($select);
-        $origSelect.trigger("beforeClose", [$select, data]);
-        Options.beforeClose.apply($origSelect, [$select, data]);
+        var afterCloseFunc = $select.prop("selectData").afterClose;
         $select.removeClass(Settings.isOpen);
-        Settings.$optionsList.hide()
+        Settings.$optionsList
+            .hide()
             .empty()
             .removeAttr("style")
-            .removeClass($select.prop("classOfList"))
+            .removeClass($select.prop("selectData").classOfList)
             .off("click.selectbox", ("." + Settings.item), clickOnOptionsListItem);
-        Settings.document.off("click.selectbox", clickOnBody)
+        Settings.doc.off("click.selectbox", clickOnBody)
             .off("keyup.selectbox", keypressEsc);
+
+        $origSelect.trigger("afterClose", [$select, data]);
+        afterCloseFunc.apply($origSelect, [$select, data]);
     };
 
     function clickOnBody(e) {
@@ -251,7 +271,6 @@
     };
 
     function keypressEsc(e) {
-        console.log(e.keyCode);
         if (e.keyCode == 27) {
             var $selectOpen = $("." + Settings.select).filter("." + Settings.isOpen);
             closeSelect($selectOpen);
