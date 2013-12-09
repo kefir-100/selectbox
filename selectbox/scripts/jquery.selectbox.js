@@ -1,5 +1,5 @@
 (function ($) {
-    var Options, Settings = {
+    var Options, Database = {}, Settings = {
         select: "ui-select",
         text: "ui-select-text",
         icon: "ui-select-icon",
@@ -8,20 +8,7 @@
         isOpen: "open",
         isPressed: "pressed",
         isSelected: "selected",
-        setData: function ($newSelect, data) {
-            $newSelect
-                .data("value", data.value)
-                .data("html", data.innerHTML)
-                .children("." + Settings.text)
-                .html(data.innerHTML);
-            return $newSelect;
-        },
-        getData: function ($newSelect) {
-            return {
-                value: $newSelect.data("value"),
-                text: $newSelect.data("html")
-            };
-        },
+        $openSelect: null,
         getWidthText: function (text) {
             var span = $("<span />").html(text).hide().appendTo(document.body);
             var width = span.width();
@@ -79,38 +66,60 @@
         }
     };
 
+    function ClassCreateSelect(uniqueId, data) {
+        var select, selectText, selectIcon, getSetData;
+        this.select = select = $("<span />");
+        this.selectText = selectText = $("<span />");
+        this.selectIcon = selectIcon = $("<span />");
+        this.cssClassOfList = Options.classes.list;
+        this.cssClassOfItem = Options.classes.item;
+        this.beforeOpenFunc = Options.beforeOpen;
+        this.afterCloseFunc = Options.afterClose;
+        this.getSetData = getSetData = function (data) {
+            var result;
+            if (data == undefined) {
+                result = {
+                    value: selectText.data("value"),
+                    html: selectText.html()
+                };
+            } else {
+                result = selectText.data("value", data.value).html(data.innerHTML);
+            }
+            return result;
+        };
+        select.addClass([Settings.select, Options.classes.select].join(" ")).prop("uniqueId", uniqueId);
+        selectText.addClass([Settings.text, Options.classes.text].join(" "));
+        selectIcon.addClass([Settings.icon, Options.classes.icon].join(" ")).html(Options.contentOfIcon);
+        getSetData(data);
+        select.append(selectText).append(selectIcon);
+    };
+
+    function GetClassOfSelect($select) {
+        var uniqueId = $select.prop("uniqueId");
+        return Database[uniqueId];
+    };
+
     function changeOriginalSelect(e) {
-        if (e.isChangeFromNewSelect == undefined) {
-            var $originalSelect = $(this);
-            var $newSelect = $originalSelect.next("." + Settings.select);
-            var selectedOption = $originalSelect[0][$originalSelect.prop("selectedIndex")];
-            Settings.setData($newSelect, selectedOption);
+        if (e.isChangeFromPluginSelectBox == undefined) {
+            var $origSelect = $(this);
+            var $newSelect = $origSelect.next("." + Settings.select);
+            var select = GetClassOfSelect($newSelect);
+            var selectedOption = $origSelect[0][$origSelect.prop("selectedIndex")];
+            select.getSetData(selectedOption);
         }
     }
 
     function eachOriginalSelect(index, element) {
-        var $originalSelect = $(element);
-        if ($originalSelect.next().hasClass(Settings.select)) return;
-        var selectData = {
-            classOfList: Options.classes.list,
-            classOfItem: Options.classes.item,
-            beforeOpen: Options.beforeOpen,
-            afterClose: Options.afterClose
-        };
-        var $newSelect = $("<span />")
-            .addClass([Settings.select, Options.classes.select].join(" "))
-            .prop("selectData", selectData);
-        var $newSelectText = $("<span />").addClass([Settings.text, Options.classes.text].join(" "));
-        var $newSelectIcon = $("<span />").addClass([Settings.icon, Options.classes.icon].join(" ")).html(Options.contentOfIcon);
-        $newSelect
-            .append($newSelectText)
-            .append($newSelectIcon)
-            .insertAfter($originalSelect.hide());
+        var $origSelect = $(element);
+        if ($origSelect.next().hasClass(Settings.select)) return;
+        var selectedOption = $origSelect[0][$origSelect.prop("selectedIndex")];
+        var uniqueId = "id" + (Math.floor(Math.random() * (9999 - 1000 + 1)) + 1000);
+        var newSelect = new ClassCreateSelect(uniqueId, selectedOption);
+        Database[uniqueId] = newSelect;
 
-        var selectedOption = $originalSelect[0][$originalSelect.prop("selectedIndex")];
-        Settings.setData($newSelect, selectedOption);
+        newSelect.select.insertAfter($origSelect.hide());
 
-        setSelectWidth($newSelect, $originalSelect);
+        setSelectWidth(newSelect.select, $origSelect);
     };
 
     function setSelectWidth($newSelect, $originalSelect) {
@@ -134,49 +143,57 @@
     }
 
     function clickOnSelect() {
-        var $select = $(this);
-        if ($select.hasClass(Settings.isOpen)) {
-            closeSelect($select);
+        var $newSelect = $(this);
+        var select = GetClassOfSelect($newSelect);
+        if ($newSelect.hasClass(Settings.isOpen)) {
+            closeSelect($newSelect, select);
         } else {
             var $selectOpen = $("." + Settings.select).filter("." + Settings.isOpen);
             if ($selectOpen.length > 0) {
-                closeSelect($selectOpen);
+                closeSelect($selectOpen, select);
             } else {
-                openSelect($select);
+                openSelect($newSelect, select);
             }
         }
         return false;
     };
 
-    function openSelect($select) {
-        var $origSelect = $select.prev();
-        var data = Settings.getData($select);
-        var beforeOpenFunc = $select.prop("selectData").beforeOpen;
-        $origSelect.trigger("beforeOpen", [$select, data]);
-        beforeOpenFunc.apply($origSelect, [$select, data]);
-        buildingOptionsList($select);
+    function openSelect($newSelect, select) {
+        var elements = {
+            $newSel: $newSelect,
+            $origSel: $newSelect.prev()
+        };
+        var data = select.getSetData();
+
+        Settings.$openSelect = elements.$newSel;
+        Settings.$openSelect.addClass(Settings.isOpen);
+
+        elements.$origSel.trigger("beforeOpen", [elements.$newSel, data]);
+        select.beforeOpenFunc.apply(elements.$origSel, [elements.$newSel, data]);
+
+        buildingOptionsList(elements, select);
         Settings.doc.on("click.selectbox", clickOnBody)
             .on("keyup.selectbox", keypressEsc);
     };
 
-    function buildingOptionsList($newSelect) {
-        var $originalSelect = $newSelect.prev();
-        var selectData = $newSelect.prop("selectData");
-        $newSelect.addClass(Settings.isOpen);
-        $originalSelect.children().each(function (index, element) {
+    function buildingOptionsList(elements, select) {
+        elements.$origSel.children().each(function (index, element) {
             var $option = $(element);
             var html = $option.html();
             var value = $option.val();
-            var $optionsListItem = $("<li />").addClass([Settings.item, selectData.classOfItem].join(" ")).data("value", value).html(html);
+            var $optionsListItem = $("<li />");
+            $optionsListItem.addClass([Settings.item, select.cssClassOfItem].join(" "))
+                .data("value", value)
+                .html(html);
             if ($option.is(":selected")) $optionsListItem.addClass(Settings.isSelected);
             Settings.$optionsList.append($optionsListItem);
         });
-        Settings.$optionsList.addClass(selectData.classOfList);
-        setDimensionsOptionsList($newSelect);
+        Settings.$optionsList.addClass(select.cssClassOfList);
+        setDimensionsOptionsList(elements);
     };
 
-    function setDimensionsOptionsList($select) {
-        var widthOfSelect = $select.outerWidth();
+    function setDimensionsOptionsList(elements) {
+        var widthOfSelect = elements.$newSel.outerWidth();
         var scrollbarWidth = 16;
         var optionsList = {
             width: Settings.$optionsList.outerWidth(),
@@ -207,18 +224,18 @@
             }
         }
         Settings.$optionsList.width(finalDimensions.width).height(finalDimensions.height);
-        setPositionOptionsList($select);
+        setPositionOptionsList(elements);
     };
 
-    function setPositionOptionsList($select) {
-        var $selectOffset = $select.offset();
-        var selectHeight = $select.outerHeight();
-        var scrollTop = Settings.body.scrollTop();
-        var realHeight = Settings.doc.height() + scrollTop;
+    function setPositionOptionsList(elements) {
+        var $selectOffset = elements.$newSel.offset();
+        var selectHeight = elements.$newSel.outerHeight();
+        var bodyScrollTop = Settings.body.scrollTop();
+        var realHeight = Settings.doc.height() + bodyScrollTop;
         var optionsListHeight = Settings.$optionsList.outerHeight();
         var position = {
             left:$selectOffset.left,
-            top: $selectOffset.top + selectHeight + scrollTop
+            top: $selectOffset.top + selectHeight + bodyScrollTop
         };
         if (position.top + optionsListHeight > realHeight) {
             position.top = position.top - selectHeight - optionsListHeight;
@@ -228,68 +245,72 @@
 
     function clickOnOptionsListItem() {
         var $optionsListItem = $(this);
-        var $selectOpen = $("." + Settings.select).filter("." + Settings.isOpen);
+        var select = GetClassOfSelect(Settings.$openSelect);
         var data = {
             value: $optionsListItem.data("value"),
             innerHTML: $optionsListItem.html()
         };
-        Settings.setData($selectOpen, data);
-        $selectOpen.prev().val(data.value).trigger({type: "change", isChangeFromNewSelect: true});
-        checkIsNeedTitle($selectOpen, $selectOpen.width());
-        closeSelect($selectOpen);
+        select.getSetData(data);
+        Settings.$openSelect.prev().val(data.value).trigger({type: "change", isChangeFromPluginSelectBox: true});
+        checkIsNeedTitle(Settings.$openSelect, Settings.$openSelect.width());
+        closeSelect(Settings.$openSelect, select);
         return false;
     };
 
-    function closeSelect($select) {
-        var $origSelect = $select.prev();
-        var data = Settings.getData($select);
-        var afterCloseFunc = $select.prop("selectData").afterClose;
-        $select.removeClass(Settings.isOpen);
+    function closeSelect($openSelect, select) {
+        var $origSelect = $openSelect.prev();
+        var data = select.getSetData();
+        $openSelect.removeClass(Settings.isOpen);
         Settings.$optionsList
             .hide()
             .empty()
             .removeAttr("style")
-            .removeClass($select.prop("selectData").classOfList)
+            .removeClass(select.cssClassOfList)
             .off("click.selectbox", ("." + Settings.item), clickOnOptionsListItem);
         Settings.doc.off("click.selectbox", clickOnBody)
             .off("keyup.selectbox", keypressEsc);
 
-        $origSelect.trigger("afterClose", [$select, data]);
-        afterCloseFunc.apply($origSelect, [$select, data]);
+        $origSelect.trigger("afterClose", [$openSelect, data]);
+        select.afterCloseFunc.apply($origSelect, [$openSelect, data]);
     };
 
     function clickOnBody(e) {
         var $clickedElem = $(e.target);
         var $parentElem = $clickedElem.parent();
-        var $selectOpen = $("." + Settings.select).filter("." + Settings.isOpen);
+        var $openSelect = Settings.$openSelect ? Settings.$openSelect : $("." + Settings.select).filter("." + Settings.isOpen);
+        var select = GetClassOfSelect($openSelect);
         if ($parentElem.prop("nodeName").toLowerCase() == "body" || $parentElem.attr("class") == undefined) {
-            closeSelect($selectOpen);
+            closeSelect($openSelect, select);
         } else {
             if (!($parentElem.hasClass(Settings.select) || $parentElem.hasClass(Settings.list)))
-                closeSelect($selectOpen);
+                closeSelect($openSelect, select);
         }
     };
 
     function keypressEsc(e) {
         if (e.keyCode == 27) {
-            var $selectOpen = $("." + Settings.select).filter("." + Settings.isOpen);
-            closeSelect($selectOpen);
+            var $openSelect = Settings.$openSelect ? Settings.$openSelect : $("." + Settings.select).filter("." + Settings.isOpen);
+            var select = GetClassOfSelect($openSelect);
+            closeSelect($openSelect, select);
         }
     }
 
-    function checkIsNeedTitle($newSelect, newSelectWidth) {
-        var newSelectText = Settings.getData($newSelect).text;
-        var newSelectTextWidth = Settings.getWidthText(newSelectText);
-        if (Options.isShowTitle && newSelectTextWidth > newSelectWidth)
-            $newSelect.attr("title", newSelectText);
-        else
-            $newSelect.removeAttr("title");
+    function checkIsNeedTitle($select, selectWidth) {
+        if (Options.isShowTitle) {
+            var select = GetClassOfSelect($select);
+            var selectText = select.getSetData().html;
+            var selectTextWidth = Settings.getWidthText(selectText);
+            if (Options.isShowTitle && selectTextWidth > selectWidth)
+                $select.attr("title", selectText);
+            else
+                $select.removeAttr("title");
+        }
     };
 
     function switchPressedState(e) {
-        var $newSelect = $(this);
+        var $select = $(this);
         var isPressed = (e.type == "mousedown");
-        $newSelect.toggleClass(Settings.isPressed, isPressed);
+        $select.toggleClass(Settings.isPressed, isPressed);
     };
 
 })(jQuery);

@@ -1,5 +1,38 @@
 $(function () {
-    // Инициализируем плагин
+    /*
+     $(".JsSelect").selectbox({
+        // width of new select
+        widthOfSelect: 200, // number (150) || number + percents (1-100%) || string ("auto")
+        // show or not tooltip text if text is too long and not displayed
+        isShowTitle: false, // true || false
+        // content of icon element
+        contentOfIcon: "", // text or html string
+        // height of drop down list
+        heightOfList: 300, // number
+        // css classes of elements
+        classes: {
+            select: "select",
+            text: "select-text",
+            icon: "select-icon",
+            list: "select-list",
+            item: "select-item"
+        },
+        // call back function before open select
+        beforeOpen: function (newSelect, data) {
+            // newSelect - new pseudo select element (<span />)
+            // data = {html: html of newSelect, value: value of newSelect}
+            // this = original <select/>
+        },
+        // call back function after close select
+        afterClose: function (newSelect, data) {
+            // newSelect - new pseudo select element (<span />)
+            // data = {html: html of newSelect, value: value of newSelect}
+            // this = original <select/>
+        }
+     });
+    */
+
+    // initialize
     $(".JsSelect").selectbox({
         widthOfSelect: 70,
         contentOfIcon: "&#9660;",
@@ -13,32 +46,33 @@ $(function () {
             item: "simple-select-item"
         },
         beforeOpen: function (newSelect, data) {
-            console.log("beforeOpen " + data.text + " " + data.value);
+            console.log("beforeOpen " + data.html + " " + data.value);
         },
         afterClose: function (newSelect, data) {
-            console.log("afterClose " + data.text + " " + data.value);
+            console.log("afterClose " + data.html + " " + data.value);
         }
     });
 
-    // Подписываемся на custom события перед открытием и после закрытия
+    // add event handler before open new pseudo select
     $(".JsSelect").on("beforeOpen",function (event, newSelect, data) {
-        // event - обычный event object
-        // newSelect - новый псевдо select, по факту <span/>
-        // data - объект которые содержит 2 свойства: текущие text и value
-        // this - в данном случае будет ссылаться на оригинальный тег <select/>
-        $(".JsTypeEvent").html("Событие перед открытием выпадающего списка");
-        $(".JsValue").html("text: " + data.text + ", value: " + data.value);
+        // event - jQuery event object
+        // newSelect - new pseudo select element (<span />)
+        // data = {html: html of newSelect, value: value of newSelect}
+        // this = original <select/>
+        $(".JsTypeEvent").html("Event before open <select />");
+        $(".JsValue").html("data = {html: " + data.html + ", value: " + data.value + "}");
     })
+    // add event handler after close new pseudo select
     .on("afterClose", function (event, newSelect, data) {
-        // event - обычный event object
-        // newSelect - новый псевдо select, по факту элемент <span/>
-        // data - объект который содержит 2 свойства: текущие text и value
-        // this - в данном случае будет ссылаться на оригинальный тег <select/>
-        $(".JsTypeEvent").html("Событие после закрытия выпадающего списка");
-        $(".JsValue").html("text: " + data.text + ", value: " + data.value);
+        // event - jQuery event object
+        // newSelect - new pseudo select element (<span />)
+        // data = {html: html of newSelect, value: value of newSelect}
+        // this = original <select/>
+        $(".JsTypeEvent").html("Event after close <select />");
+        $(".JsValue").html("data = {html: " + data.html + ", value: " + data.value + "}");
     });
 
-    // Инициализируем плагин
+    // initialize
     $(".JsSelect2").selectbox({
         widthOfSelect: 300,
         isShowTitle: false,
@@ -50,15 +84,17 @@ $(function () {
             list: "long-select-list",
             item: "long-select-item"
         },
+        // add event handler before open new pseudo select
         beforeOpen: function (newSelect, data) {
-            console.log("beforeOpen " + data.text + " " + data.value);
+            console.log("beforeOpen " + data.html + " " + data.value);
         },
+        // add event handler after close new pseudo select
         afterClose: function (newSelect, data) {
-            console.log("afterClose " + data.text + " " + data.value);
+            console.log("afterClose " + data.html + " " + data.value);
         }
     });
 
-    // Инициализируем плагин
+    // initialize
     $(".JsSelect3").selectbox({
         widthOfSelect: 150,
         isShowTitle: true,
